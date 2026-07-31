@@ -1,1 +1,166 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Fleet Alpha</title><link rel="stylesheet" href="styles.css"></head><body><header><div><b>Fleet Alpha</b><span>Vehicle investment operating system</span></div><nav><button data-view="dashboard">Dashboard</button><button data-view="vehicles">Vehicles</button><button data-view="earnings">Earnings</button><button data-view="offers">Offers</button><button data-view="data">Import & Backup</button></nav></header><main><section id="dashboard" class="view active"><div class="hero"><div><h1>Fleet overview</h1><p>Track cash flow, mileage, equity and exit readiness without spreadsheets.</p></div><button class="primary" onclick="openVehicle()">Add vehicle</button></div><div id="kpis" class="kpis"></div><div id="cards" class="cards"></div></section><section id="vehicles" class="view"><div class="hero"><div><h1>Vehicles</h1><p>Add, edit and manage every asset.</p></div><button class="primary" onclick="openVehicle()">Add vehicle</button></div><div id="vehicleTable"></div></section><section id="earnings" class="view"><div class="hero"><div><h1>Earnings</h1><p>Maintain monthly Turo income and costs.</p></div><button class="primary" onclick="openEarning()">Add month</button></div><div id="earningTable"></div></section><section id="offers" class="view"><div class="hero"><div><h1>Offers</h1><p>Track market estimates and executable bids.</p></div><button class="primary" onclick="openOffer()">Add offer</button></div><div id="offerTable"></div></section><section id="data" class="view"><div class="hero"><div><h1>Import & backup</h1><p>Data is stored only in this browser.</p></div></div><div class="panel"><h2>Turo CSV import</h2><p>Import CSV exports. Reservations are deduplicated by reservation ID.</p><input id="csv" type="file" accept=".csv" multiple><button class="primary" onclick="importCSV()">Import selected files</button><div id="importMsg"></div></div><div class="panel"><h2>Backup</h2><button onclick="exportData()">Export JSON</button><input id="restore" type="file" accept="application/json"><button onclick="restoreData()">Restore JSON</button><button class="danger" onclick="resetData()">Reset demo data</button></div></section></main><dialog id="modal"><form id="form" method="dialog"><div class="modalHead"><h2 id="modalTitle"></h2><button value="cancel">×</button></div><div id="fields" class="formGrid"></div><menu><button value="cancel">Cancel</button><button id="saveBtn" class="primary" value="default">Save</button></menu></form></dialog><script src="app.js"></script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Fleet Alpha — a private-first vehicle investment operating system.">
+  <title>Fleet Alpha</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="app-header">
+    <a class="brand" href="#dashboard" data-view-link="dashboard" aria-label="Fleet Alpha dashboard">
+      <span class="brand-mark">FA</span>
+      <span><strong>Fleet Alpha</strong><small>Vehicle investment OS</small></span>
+    </a>
+    <nav aria-label="Primary navigation">
+      <button type="button" data-view="dashboard">Dashboard</button>
+      <button type="button" data-view="vehicles">Vehicles</button>
+      <button type="button" data-view="records">Records</button>
+      <button type="button" data-view="forecast">Forecast</button>
+      <button type="button" data-view="data">Data</button>
+      <button type="button" data-view="settings">Settings</button>
+    </nav>
+  </header>
+
+  <div class="privacy-notice" role="note">
+    <strong>Private to this browser.</strong> Your fleet data stays in this browser’s local storage. It is not encrypted, backed up, or synchronized across devices.
+  </div>
+
+  <main id="main">
+    <section id="dashboard" class="view active" aria-labelledby="dashboard-title">
+      <div class="hero">
+        <div>
+          <p class="eyebrow">Decision dashboard</p>
+          <h1 id="dashboard-title">Your fleet, at a glance</h1>
+          <p>Clear operating signals for what to hold, prepare, or sell.</p>
+        </div>
+        <button class="primary" type="button" data-action="add-vehicle">Add vehicle</button>
+      </div>
+      <div id="kpis" class="kpis" aria-label="Portfolio summary"></div>
+      <div class="section-heading">
+        <div><h2>Vehicle decisions</h2><p>Recommendations update automatically as records change.</p></div>
+      </div>
+      <div id="cards" class="cards"></div>
+    </section>
+
+    <section id="vehicles" class="view" aria-labelledby="vehicles-title">
+      <div class="hero">
+        <div><p class="eyebrow">Assets</p><h1 id="vehicles-title">Vehicles</h1><p>Manage financing, value, mileage, and assumptions.</p></div>
+        <button class="primary" type="button" data-action="add-vehicle">Add vehicle</button>
+      </div>
+      <div id="vehicleTable"></div>
+    </section>
+
+    <section id="records" class="view" aria-labelledby="records-title">
+      <div class="hero">
+        <div><p class="eyebrow">Operating ledger</p><h1 id="records-title">Fleet records</h1><p>Earnings, offers, payoffs, maintenance, and incidents.</p></div>
+        <button id="addRecordBtn" class="primary" type="button">Add earning</button>
+      </div>
+      <div id="recordTabs" class="tabs" role="tablist" aria-label="Record type"></div>
+      <div id="recordTable"></div>
+    </section>
+
+    <section id="forecast" class="view" aria-labelledby="forecast-title">
+      <div class="hero">
+        <div><p class="eyebrow">12-month outlook</p><h1 id="forecast-title">Exit forecast</h1><p>Directional estimates based on recent performance and your assumptions.</p></div>
+      </div>
+      <div id="forecastContent"></div>
+    </section>
+
+    <section id="data" class="view" aria-labelledby="data-title">
+      <div class="hero">
+        <div><p class="eyebrow">Portability</p><h1 id="data-title">Import & backup</h1><p>Bring in Turo activity and keep a private copy of your data.</p></div>
+      </div>
+      <div class="data-grid">
+        <article class="panel">
+          <span class="panel-icon" aria-hidden="true">CSV</span>
+          <h2>Import Turo CSV</h2>
+          <p>Choose one or more files. You will review matches, duplicates, and unmatched rows before anything is saved.</p>
+          <label class="file-picker">Choose CSV files<input id="csvFiles" type="file" accept=".csv,text/csv" multiple></label>
+          <div id="csvSelection" class="muted" aria-live="polite">No files selected</div>
+          <button id="previewImportBtn" class="primary" type="button">Preview import</button>
+          <div id="importResult" class="result-box" aria-live="polite"></div>
+        </article>
+        <article class="panel">
+          <span class="panel-icon" aria-hidden="true">JSON</span>
+          <h2>Backup & restore</h2>
+          <p>Export a complete versioned backup. Restore validates the file before replacing local data.</p>
+          <div class="stack-actions">
+            <button id="exportBtn" type="button">Export JSON backup</button>
+            <label class="file-picker secondary">Choose backup<input id="restoreFile" type="file" accept=".json,application/json"></label>
+            <button id="restoreBtn" type="button">Restore selected backup</button>
+          </div>
+        </article>
+        <article class="panel danger-panel">
+          <span class="panel-icon" aria-hidden="true">!</span>
+          <h2>Reset local data</h2>
+          <p>Demo reset restores fictional starter records. Clear removes every fleet record and starts empty.</p>
+          <div class="stack-actions">
+            <button id="resetBtn" type="button">Reset to demo data</button>
+            <button id="clearBtn" class="danger" type="button">Clear all data</button>
+          </div>
+        </article>
+        <article class="panel">
+          <span class="panel-icon" aria-hidden="true">IDs</span>
+          <h2>Imported reservations</h2>
+          <p>Reservation IDs prevent repeat imports. Remove an ID only when you intentionally need to re-import it.</p>
+          <div id="reservationTable"></div>
+        </article>
+      </div>
+    </section>
+
+    <section id="settings" class="view" aria-labelledby="settings-title">
+      <div class="hero">
+        <div><p class="eyebrow">Decision policy</p><h1 id="settings-title">Settings</h1><p>Control recommendation thresholds and forecasting assumptions.</p></div>
+      </div>
+      <form id="settingsForm" class="panel settings-form">
+        <div class="form-grid">
+          <label>Hold threshold ($ / month)<span>Hold when value is at or above this amount.</span><input name="holdThreshold" type="number" step="1" required></label>
+          <label>Prepare-to-sell floor ($ / month)<span>Prepare when value is between this floor and hold threshold.</span><input name="prepareThreshold" type="number" step="1" required></label>
+          <label>Loan payoff decline / month ($)<span>Fallback monthly principal reduction when no payoff history exists.</span><input name="loanPayoffDecline" type="number" min="0" step="1" required></label>
+          <label>Recent average window (months)<span>Number of recent earning months used in the forecast.</span><input name="averageMonths" type="number" min="1" max="12" step="1" required></label>
+          <label>Sale friction (%)<span>Estimated transaction cost deducted from projected equity.</span><input name="saleFrictionPct" type="number" min="0" max="25" step=".1" required></label>
+          <label>Currency<span>Display currency for all calculations.</span><select name="currency"><option value="USD">USD — US dollar</option></select></label>
+        </div>
+        <div class="form-actions"><button class="primary" type="submit">Save settings</button></div>
+      </form>
+      <div class="panel explainer">
+        <h2>How recommendations work</h2>
+        <dl>
+          <div><dt>ADD DATA</dt><dd>Payoff, market/offer value, or depreciation is missing.</dd></div>
+          <div><dt>HOLD</dt><dd>Expected next-month profit minus depreciation is materially positive.</dd></div>
+          <div><dt>PREPARE TO SELL</dt><dd>Hold value is close to zero or the recent profit trend is declining.</dd></div>
+          <div><dt>SELL NOW</dt><dd>Hold value is negative and a current exit has non-negative equity, or waiting worsens the outlook.</dd></div>
+        </dl>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="editorDialog" aria-labelledby="editorTitle">
+    <form id="editorForm">
+      <div class="modal-head"><div><p id="editorEyebrow" class="eyebrow"></p><h2 id="editorTitle">Edit</h2></div><button class="icon-button" type="button" data-close aria-label="Close">×</button></div>
+      <div id="editorFields" class="form-grid modal-body"></div>
+      <div class="modal-actions"><button type="button" data-close>Cancel</button><button class="primary" type="submit">Save</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="confirmDialog" class="confirm-dialog" aria-labelledby="confirmTitle">
+    <div class="modal-head"><div><p class="eyebrow">Please confirm</p><h2 id="confirmTitle">Confirm action</h2></div></div>
+    <div class="modal-body"><p id="confirmMessage"></p></div>
+    <div class="modal-actions"><button id="confirmCancel" type="button">Cancel</button><button id="confirmAccept" class="danger" type="button">Confirm</button></div>
+  </dialog>
+
+  <dialog id="importDialog" class="import-dialog" aria-labelledby="importTitle">
+    <div class="modal-head"><div><p class="eyebrow">Turo CSV</p><h2 id="importTitle">Review import</h2></div><button class="icon-button" type="button" data-import-close aria-label="Close">×</button></div>
+    <div id="importSummary" class="import-summary"></div>
+    <div id="importPreview" class="modal-body"></div>
+    <div class="modal-actions"><button type="button" data-import-close>Cancel</button><button id="commitImportBtn" class="primary" type="button">Import valid rows</button></div>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <footer><span>Fleet Alpha</span><span>Local-first by design · <a href="README.md">Usage & privacy</a></span></footer>
+  <script src="app.js"></script>
+</body>
+</html>
